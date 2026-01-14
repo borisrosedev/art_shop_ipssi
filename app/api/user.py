@@ -7,7 +7,7 @@ api_v1_user = Blueprint(name='api_v1_user',import_name=__name__,url_prefix='/api
 @api_v1_user.route("/", methods=["POST", "GET", "PUT", "PATCH"])
 def user_list_and_current_user_crud():
     if request.method == "GET":
-        if session and session["role"] == "admin":
+        if session and (session["role"] == "admin"):
             users = db.session.execute(db.select(User).order_by(User.username)).scalars()
             return jsonify({"users": [user.to_dic() for user in users]})
         return jsonify({ "message": "you are not allowed to access that resource"}), 401
@@ -15,8 +15,16 @@ def user_list_and_current_user_crud():
     if request.method in ("PATCH","PUT"):
         firstname = request.get_json().get('firstname')
         lastname = request.get_json().get('lastname')
+        password = request.get_json().get('password')
+        email = request.get_json().get('email')
         if session and 'user_id' in session:
             user = db.get_or_404(User, session['user_id'])
+            if email is not None:
+                user.email = email 
+                session["email"] = email
+                session.permanent = True
+            if password is not None:
+                user.password = password
             if firstname is not None:
                 user.firstname = firstname
             if lastname is not None:
