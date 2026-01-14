@@ -61,36 +61,37 @@ def get_me():
         return jsonify({ "message": "bad request"}), 401
 
 
-@api_v1_user.route("/<int:user_id>", methods=['GET', 'PUT', 'PATCH','DELETE'])
+@api_v1_user.route("/<int:id>", methods=['GET', 'PUT', 'PATCH','DELETE'])
 def get_user(id):
-    user = db.get_or_404(User, id)
+    try:
+        user = db.get_or_404(User, id)
+        if request.method in ["PUT", "PATCH"]:
+            data = request.get_json()
+            firstname = data.get('firstname')
+            if (firstname is not None) and firstname.isalpha():
+                user.firstname = firstname
+            lastname = data.get('lastname')  
+            if (lastname is not None) and lastname.isalpha():
+                user.lastname = lastname
+            email = data.get('email')  
+            if (email is not None):
+                user.email = email
+            password = data.get('password')
+            if (password is not None) and len(password) >= 12:
+                user.password = password
+            return jsonify({"message": f"user with id {id} has been successfully updated"}), 200
 
-    if request.method in ["PUT", "PATCH"]:
-        data = request.get_json()
-        firstname = data.get('firstname')
-        if (firstname is not None) and firstname.isalpha():
-            user.firstname = firstname
-        lastname = data.get('lastname')  
-        if (lastname is not None) and lastname.isalpha():
-            user.lastname = lastname
-        email = data.get('email')  
-        if (email is not None):
-            user.email = email
-        password = data.get('password')
-        if (password is not None) and len(password) >= 12:
-            user.password = password
-        return jsonify({"message": f"user with id {id} has been successfully updated"}), 200
-
-    if request.method == "DELETE":
-        if session["role"] == "admin" or session["email"] == user.email:
-            db.session.delete(user)
-            db.session.commit()
-            return jsonify({"message":f"user {user.id} has been successfully deleted"}), 200
-        else:
-            return jsonify({"message":f"you are not allowed to delete the user with id {user.id}"}), 401
-        
-    if request.method == "GET":
-        if session["role"] == "admin" or session["email"] == user.email:
-            return jsonify({"user": user.to_dic()})
-
-    return jsonify({"message":f"user {user.id}"})   
+        if request.method == "DELETE":
+            if session["role"] == "admin" or session["email"] == user.email:
+                db.session.delete(user)
+                db.session.commit()
+                return jsonify({"message":f"user {user.id} has been successfully deleted"}), 200
+            else:
+                return jsonify({"message":f"you are not allowed to delete the user with id {user.id}"}), 401
+            
+        if request.method == "GET":
+            if 'role' in session and (session["role"] == "admin" or session["email"] == user.email):
+                return jsonify({"user": user.to_dic()})
+        return jsonify({"message":f"user {user.id}"})  
+    except:
+        return jsonify({ "message":f"invalid user id : {id}"}) 
